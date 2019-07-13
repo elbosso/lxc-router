@@ -22,4 +22,5 @@ The router is set up so that it works as out-of-the-box router and gateway for d
 The firewall rules are rather restrictive after setup - the clients can only access the internet and no one can access any clients.
 The DHCP addresses given out by the DHCP server lie in the same network than does the routers internal interface (intaddress).
 
-My favorite search engine is [Duck Duck Go](https://duckduckgo.com).
+bridges  
+nwo what?
