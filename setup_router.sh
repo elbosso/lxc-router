@@ -71,3 +71,8 @@ lxc-attach -n ${container} -- bash -c "echo iptables-persistent iptables-persist
 lxc-attach -n ${container} -- bash -c "echo iptables-persistent iptables-persistent/autosave_v6 boolean true | debconf-set-selections"
 
 lxc-attach -n ${container} -- apt-get install -y iptables-persistent
+lxc-attach -n ${container} -- apt-get -y autoremove
+lxc-attach -n ${container} -- apt-get clean
+
+
+
