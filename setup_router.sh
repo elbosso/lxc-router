@@ -8,6 +8,7 @@ intdev=${3}
 intaddress=${4}
 intmask=${5}
 nameserver=${6}
+intdomain=${7}
 
 echo "operating from within ${script_dir}"
 
@@ -44,7 +45,8 @@ sleep 4
 lxc-attach -n ${container} -- systemctl stop systemd-resolved.service
 lxc-attach -n ${container} -- systemctl disable systemd-resolved.service
 lxc-attach -n ${container} -- rm /etc/resolv.conf
-lxc-attach -n ${container} -- /bin/bash -c "echo 'nameserver ${nameserver}' >/etc/resolv.conf"
+lxc-attach -n ${container} -- /bin/bash -c "echo 'nameserver 127.0.0.1' >/etc/resolv.conf"
+lxc-attach -n ${container} -- /bin/bash -c "echo 'nameserver ${nameserver}' >>/etc/resolv.conf"
 #lxc-attach -n ${container} -- 
 
 lxc-attach -n ${container} -- apt-get update
@@ -55,7 +57,8 @@ intsubnet=`echo ${intaddress} | cut -d"." -f1-3`
 
 cp ${script_dir}/dnsmasq.conf ${script_dir}/dnsmasq.conf.work
 sed -i "s/intsubnet/${intsubnet}/g" ${script_dir}/dnsmasq.conf.work
-
+sed -i "s%#local=/localnet/%local=/${intdomain}/%g" ${script_dir}/dnsmasq.conf.work
+sed -i "s/domain=intdomain.lab/domain=${intdomain}/g" ${script_dir}/dnsmasq.conf.work
 cp ${script_dir}/dnsmasq.conf.work ${rootfs}/etc/dnsmasq.conf
 
 lxc-attach -n ${container} -- systemctl stop systemd-resolved.service
