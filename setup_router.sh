@@ -13,11 +13,23 @@ intdomain=${7}
 
 echo "operating from within ${script_dir}"
 
+lxc-info -n ${container}
+if [ $? -eq 0 ]
+then
+	echo "container already there - aborting!"
+	exit 1
+fi
 echo "building container ${container}..."
 
 #lxc-create for the container - at this moment, we always build a bionic beaver ubuntu container
 lxc-create -t download -n ${container} -- -d ubuntu -r bionic  -a amd64
 
+lxc-info -n ${container}
+if [ $? -ne 0 ]
+then
+	echo "container creation failed - aborting!"
+	exit 2
+fi
 #changing the config of the container so it has the interfaces named
 #at startup properly assigned
 sed -i "s/lxc.net.0.link =.*/lxc.net.0.link = ${extdev}/g" /var/lib/lxc/${container}/config
