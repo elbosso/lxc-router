@@ -39,7 +39,7 @@ echo "lxc.net.1.flags = up" >> /var/lib/lxc/${container}/config
 
 #starting the container
 lxc-start -n ${container}
-sleep 4
+lxc-wait -n ${container} -s RUNNING
 
 #netplan: arghhh! We want ifupdown and so we need to get rid of 
 #this junk!
@@ -65,8 +65,9 @@ cp ${script_dir}/interfaces.work ${rootfs}/etc/network/interfaces
 #we restart the container to have the interfaces correctly configured
 #at our disposition
 lxc-stop -n ${container}
+lxc-wait -n ${container} -s STOPPED
 lxc-start -n ${container}
-sleep 4
+lxc-wait -n ${container} -s RUNNING
 
 #we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
 #therefore, it has to go
@@ -116,7 +117,7 @@ lxc-attach -n ${container} -- apt-get -y autoremove
 lxc-attach -n ${container} -- apt-get clean
 
 lxc-stop -n ${container}
-sleep 4
+lxc-wait -n ${container} -s STOPPED
 lxc-start -n ${container}
 
 
