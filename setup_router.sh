@@ -68,15 +68,17 @@ lxc-wait -n "$container" -s STOPPED
 lxc-start -n "$container"
 lxc-wait -n "$container" -s RUNNING
 
-#we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
-#therefore, it has to go
-lxc-attach -n "$container" -- systemctl stop systemd-resolved.service
-lxc-attach -n "$container" -- systemctl disable systemd-resolved.service
-
 #we install our own version of /etc/resolv.conf...
 lxc-attach -n "$container" -- rm /etc/resolv.conf
 lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver 127.0.0.1' >/etc/resolv.conf"
 lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver $nameserver' >>/etc/resolv.conf"
+
+#we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
+#therefore, it has to go
+lxc-attach -n "$container" -- /bin/bash -c "mkdir -p /run/dbus"
+lxc-attach -n "$container" -- /bin/bash -c "dbus-daemon --system"
+lxc-attach -n "$container" -- /bin/bash -c "systemctl stop systemd-resolved.service"
+lxc-attach -n "$container" -- /bin/bash -c "systemctl disable systemd-resolved.service"
 
 #Now we install ll needed packages
 #(or some the author deems necessary...)
@@ -94,10 +96,6 @@ sed -i "s%#local=/localnet/%local=/$intdomain/%g" "$script_dir"/dnsmasq.conf.wor
 sed -i "s/domain=intdomain.lab/domain=$intdomain/g" "$script_dir"/dnsmasq.conf.work
 cp "$script_dir"/dnsmasq.conf.work "$rootfs"/etc/dnsmasq.conf
 
-#we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
-#therefore, it has to go
-lxc-attach -n "$container" -- systemctl stop systemd-resolved.service
-lxc-attach -n "$container" -- systemctl disable systemd-resolved.service
 lxc-attach -n "$container" -- service dnsmasq stop
 lxc-attach -n "$container" -- service dnsmasq start
 
@@ -118,5 +116,4 @@ lxc-attach -n "$container" -- apt-get clean
 lxc-stop -n "$container"
 lxc-wait -n "$container" -s STOPPED
 lxc-start -n "$container"
-
 
