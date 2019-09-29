@@ -21,7 +21,7 @@ This project holds scripts for setting up lightweight containers for various use
 This script sets up a LXC container that can act as a router or gateway. It has several command line parameters. Their meaning is as follows:
 
 ```
-./setup_router.sh <container> <extdev> <intdev> <intaddress> <intmask> <nameserver> <intdomain>
+./setup_router.sh <container> <extdev> <intdev> <intaddress> <intmask> <nameserver> <intdomain> [<staticip>] [<staticmask>]
 ```
 <dl>
   <dt>container</dt><dd>The name of the container to be created</dd>
@@ -31,9 +31,25 @@ This script sets up a LXC container that can act as a router or gateway. It has 
   <dt>intmask</dt><dd>The netmask for the routers internal network device (intdev).</dd>
   <dt>nameserver</dt><dd>The parent nameserver - it is used when dnsmasq itself does not know about a particular name - the query is delegated then to the DNS server given here.</dd>
   <dt>intdomain</dt><dd>The domain for the hosts on the internal network device (intdev).</dd>
+  <dt>staticip</dt><dd>If the external interface of the appliance should get
+  a static ip - this is the place to specify it. If this parameter is not
+  given, DHCP is assumed for the exernal interface.</dd>
+  <dt>staticmask</dt><dd>This parameter is only evaluated if a ststic ip is
+  specified for the external interface. In this case, this parameter
+  specifies the netmask for the network the external interface is added to.
+  If the parameter is not specified explicitly, 255.255.255.0 (/24) is
+  assumed. </dd>
 </dl>
 
 The router is set up so that it works as out-of-the-box router and gateway for devices in the internal network. After setup, devices in this network (connected to the bridge intdev is also connected to) get a IPv4 address from the routers DHCP service as well as a gateway and a DNS server address and can connect to the internet.
 
 The firewall rules are rather restrictive after setup - the clients can only access the internet and no one can access any clients.
 The DHCP addresses given out by the DHCP server lie in the same network than does the routers internal interface (intaddress).
+
+There is no installation of an SSH-server on this appliance - if it is
+needed, it has to be installed separately.
+
+Additionally, no password is set for the default user account named ubuntu.
+If the user wants to use the console or SSH to login, some administrator has
+to set a password for this account first (or create entirely new accounts of
+course).
