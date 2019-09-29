@@ -14,6 +14,19 @@ intdomain="$7"
 
 echo "operating from within $script_dir"
 
+ip link show "$intdev" > /dev/null 2>&1 
+if [ $? -ne 0 ]
+then
+        echo "$intdev does not exist - exiting..."
+        exit 1
+fi
+ip link show "$extdev" > /dev/null 2>&1 
+if [ $? -ne 0 ]
+then
+        echo "$extdev does not exist - exiting..."
+        exit 2
+fi
+
 lxc-info -n "$container"
 if [ $? -eq 0 ]
 then
@@ -117,3 +130,13 @@ lxc-stop -n "$container"
 lxc-wait -n "$container" -s STOPPED
 lxc-start -n "$container"
 
+ip link show "$intdev" | grep "state UP" > /dev/null
+if [ $? -ne 0 ]
+then
+	echo "$intdev is not up (yet) - is this on purpose?"
+fi
+ip link show "$extdev" | grep "state UP" > /dev/null
+if [ $? -ne 0 ]
+then
+	echo "$extdev is not up (yet) - is this on purpose?"
+fi
