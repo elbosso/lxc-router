@@ -11,6 +11,8 @@ intaddress="$4"
 intmask="$5"
 nameserver="$6"
 intdomain="$7"
+staticip="${8:-dhcp}"
+staticmask="${9:-255.255.255.0}"
 
 echo "operating from within $script_dir"
 
@@ -56,6 +58,7 @@ lxc-wait -n "$container" -s RUNNING
 #netplan: arghhh! We want ifupdown and so we need to get rid of 
 #this junk!
 lxc-attach -n "$container" -- apt-get -y remove netplan
+lxc-attach -n "$container" -- rm -rf /etc/netplan
 
 #Because we do not use or require LXD at this point,
 #we can not use lxc push file
@@ -67,7 +70,14 @@ rootfs=$(lxc-info -n "$container" -c lxc.rootfs.path|rev|cut -d " " -f 1|cut -d 
 
 #Now we customize the network interface configuration and
 #copy it to the right place inside the containers file system
-cp "$script_dir"/interfaces "$script_dir"/interfaces.work
+if [ "$staticip" == "dhcp" ]; 
+then
+  cp "$script_dir"/interfaces_external_dhcp "$script_dir"/interfaces.work
+else
+  cp "$script_dir"/interfaces_external_static "$script_dir"/interfaces.work
+  sed -i "s/staticmask/$staticmask/g" "$script_dir"/interfaces.work
+  sed -i "s/staticaddress/$staticip/g" "$script_dir"/interfaces.work
+fi
 sed -i "s/intmask/$intmask/g" "$script_dir"/interfaces.work
 sed -i "s/intaddress/$intaddress/g" "$script_dir"/interfaces.work
 
