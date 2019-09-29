@@ -55,11 +55,6 @@ sed -i "s/lxc.net.0.link =.*/lxc.net.0.link = $extdev/g" /var/lib/lxc/"$containe
 lxc-start -n "$container"
 lxc-wait -n "$container" -s RUNNING
 
-#netplan: arghhh! We want ifupdown and so we need to get rid of 
-#this junk!
-lxc-attach -n "$container" -- apt-get -y remove netplan
-lxc-attach -n "$container" -- rm -rf /etc/netplan
-
 #Because we do not use or require LXD at this point,
 #we can not use lxc push file
 #so we have to cp files and to be able to do so - we
@@ -77,6 +72,7 @@ else
   cp "$script_dir"/interfaces_external_static "$script_dir"/interfaces.work
   sed -i "s/staticmask/$staticmask/g" "$script_dir"/interfaces.work
   sed -i "s/staticaddress/$staticip/g" "$script_dir"/interfaces.work
+  sed -i "s/nameserverip/$nameserver/g" "$script_dir"/interfaces.work
 fi
 sed -i "s/intmask/$intmask/g" "$script_dir"/interfaces.work
 sed -i "s/intaddress/$intaddress/g" "$script_dir"/interfaces.work
@@ -91,17 +87,7 @@ lxc-wait -n "$container" -s STOPPED
 lxc-start -n "$container"
 lxc-wait -n "$container" -s RUNNING
 
-#we install our own version of /etc/resolv.conf...
-lxc-attach -n "$container" -- rm /etc/resolv.conf
-lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver 127.0.0.1' >/etc/resolv.conf"
-lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver $nameserver' >>/etc/resolv.conf"
-
-#we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
-#therefore, it has to go
-lxc-attach -n "$container" -- /bin/bash -c "mkdir -p /run/dbus"
-lxc-attach -n "$container" -- /bin/bash -c "dbus-daemon --system"
-lxc-attach -n "$container" -- /bin/bash -c "systemctl stop systemd-resolved.service"
-lxc-attach -n "$container" -- /bin/bash -c "systemctl disable systemd-resolved.service"
+sleep 5
 
 #Now we install ll needed packages
 #(or some the author deems necessary...)
@@ -118,6 +104,18 @@ sed -i "s/intsubnet/$intsubnet/g" "$script_dir"/dnsmasq.conf.work
 sed -i "s%#local=/localnet/%local=/$intdomain/%g" "$script_dir"/dnsmasq.conf.work
 sed -i "s/domain=intdomain.lab/domain=$intdomain/g" "$script_dir"/dnsmasq.conf.work
 cp "$script_dir"/dnsmasq.conf.work "$rootfs"/etc/dnsmasq.conf
+
+#we install our own version of /etc/resolv.conf...
+lxc-attach -n "$container" -- rm /etc/resolv.conf
+lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver 127.0.0.1' >/etc/resolv.conf"
+lxc-attach -n "$container" -- /bin/bash -c "echo 'nameserver $nameserver' >>/etc/resolv.conf"
+
+#we want to use dnsmasq as DNS server but systemd hogs the standard DNS port - 
+#therefore, it has to go
+lxc-attach -n "$container" -- /bin/bash -c "mkdir -p /run/dbus"
+lxc-attach -n "$container" -- /bin/bash -c "dbus-daemon --system"
+lxc-attach -n "$container" -- /bin/bash -c "systemctl stop systemd-resolved.service"
+lxc-attach -n "$container" -- /bin/bash -c "systemctl disable systemd-resolved.service"
 
 lxc-attach -n "$container" -- service dnsmasq stop
 lxc-attach -n "$container" -- service dnsmasq start
@@ -138,7 +136,20 @@ lxc-attach -n "$container" -- apt-get clean
 
 lxc-stop -n "$container"
 lxc-wait -n "$container" -s STOPPED
+
 lxc-start -n "$container"
+lxc-wait -n "$container" -s RUNNING
+
+#netplan: arghhh! We want ifupdown and so we need to get rid of 
+#this junk!
+lxc-attach -n "$container" -- apt-get -y remove netplan
+lxc-attach -n "$container" -- rm -rf /etc/netplan
+
+lxc-stop -n "$container"
+lxc-wait -n "$container" -s STOPPED
+
+lxc-start -n "$container"
+lxc-wait -n "$container" -s RUNNING
 
 ip link show "$intdev" | grep "state UP" > /dev/null
 if [ $? -ne 0 ]

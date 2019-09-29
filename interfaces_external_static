@@ -12,6 +12,7 @@ auto eth0
 iface eth0 inet static
   address staticaddress
   netmask staticmask
+  gateway nameserverip
 
 auto eth1
 iface eth1 inet static
