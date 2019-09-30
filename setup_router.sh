@@ -50,6 +50,10 @@ fi
 #at startup properly assigned
 sed -i "s/lxc.net.0.link =.*/lxc.net.0.link = $extdev/g" /var/lib/lxc/"$container"/config
 { echo "lxc.net.1.type = veth" ;echo "lxc.net.1.link = $intdev" ;echo "lxc.net.1.flags = up"; } >> /var/lib/lxc/"$container"/config
+{ echo "## tun/tap" ;echo "#lxc.autodev = 1" ;echo "#lxc.hook.autodev = /var/lib/lxc/$container/autodev" ;echo "#lxc.pty.max = 1024"; } >> /var/lib/lxc/"$container"/config
+echo "#lxc.cgroup.devices.allow = c 10:200 rwm" >> /var/lib/lxc/"$container"/config 
+
+cp -a "$script_dir"/autodev /var/lib/lxc/"$container" 
 
 #starting the container
 lxc-start -n "$container"
