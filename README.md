@@ -16,6 +16,26 @@
 
 This project holds scripts for setting up lightweight containers for various use cases. Kind of like docker scripts but without docker.
 
+## Preconditions
+
+This script has been extensively tested on the latest long term support version of Ubuntu - this being 18.04. When trying to use it on other distributions or flavours there may be incompatibilities or other problems, prohibiting productive use.
+
+The server that is going to host the resulting appliances must have linux-bridges available. On Ubuntu and derivates this can be achieved by installing the package named bridge-utils by issuing for example `sudo apt install bridge-utils`. 
+
+The server that is going to host the resulting appliances should also have IPv4-Forwarding enabled. This can be achieved either by issuing `echo 1 > /proc/sys/net/ipv4/ip_forward` or `sysctl -w net.ipv4.ip_forward=1` but this change will be gone after the next boot. To make this change persistent, edit _/etc/sysctl.conf_ and change the value of `net.ipv4.ip_forward = 1`. To read the current state of affairs, one can issue either `sysctl net.ipv4.ip_forward` or `cat /proc/sys/net/ipv4/ip_forward`.
+
+As a router appliance needs to be connected to two bridges it is necessary to create them. This can be done by issuing `brctl addbr <name_of_bridge>`. This however is only good until after the next reboot. Another possibility - and one that is persistent and survives the next reboot - is to append the following snippet to _/etc/network/interfaces_  for each bridge needed:
+
+```
+auto <name_of_bridge>
+iface <name_of_bridge> inet dhcp
+  bridge_ports none
+```
+
+Of course, one has to get rid of *netplan* and install *ifupdown* before this can work.
+
+The safest bet is to call `service networking restart` afterwards to activate the changes
+
 ## setup_router.sh
 
 This script sets up a LXC container that can act as a router or gateway. It has several command line parameters. Their meaning is as follows:
