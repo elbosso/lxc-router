@@ -1,7 +1,21 @@
 #!/bin/bash
 # shellcheck disable=SC2181
-#script="$0"
+script="$0"
 script_dir=$(dirname $"script")
+
+if [ "$#" -ne 7 ]; then
+    echo "Illegal number of parameters"
+	echo "$script containername extdev intdev intaddress intmask nameserver intdomain [staticip] [staticmask]"
+	echo -e "\tcontainername\tname of the container to be created"
+	echo -e "\textdev\t device for coupling the router to the WAN"
+	echo -e "\tintdev\t device for coupling the router to the LAN"
+	echo -e "\tintaddress\tnetwork address of the router inside the LAN"
+	echo -e "\tintmask\tnetmask for the LAN"
+	echo -e "\tnameserver\taddress of nameserver in WAN"
+	echo -e "\tintdomain\tdomain name for the LAN"
+	echo -e "\tstaticip\tIP address of the router inside the WAN or special value \"dhcp\" (the default)"
+	echo -e "\tstaticmask\tnetmask of the router inside the wan (only used if staticip is not \"dhcp\""
+fi
 
 #config variables from command line arguments
 container="$1"
@@ -37,8 +51,8 @@ then
 fi
 echo "building container $container..."
 
-#lxc-create for the container - at this moment, we always build a bionic beaver ubuntu container
-lxc-create -t download -n "$container" -- -d ubuntu -r bionic  -a amd64
+#lxc-create for the container - at this moment, we always build a focal beaver ubuntu container
+lxc-create -t download -n "$container" -- -d ubuntu -r focal  -a amd64
 
 lxc-info -n "$container"
 if [ $? -ne 0 ]
@@ -46,14 +60,17 @@ then
 	echo "container creation failed - aborting!"
 	exit 2
 fi
+
+rootfs=$(lxc-info -n "$container" -c lxc.rootfs.path|rev|cut -d " " -f 1|cut -d ":" -f 1|rev)
+
 #changing the config of the container so it has the interfaces named
 #at startup properly assigned
-sed -i "s/lxc.net.0.link =.*/lxc.net.0.link = $extdev/g" /var/lib/lxc/"$container"/config
-{ echo "lxc.net.1.type = veth" ;echo "lxc.net.1.link = $intdev" ;echo "lxc.net.1.flags = up"; } >> /var/lib/lxc/"$container"/config
-{ echo "## tun/tap" ;echo "#lxc.autodev = 1" ;echo "#lxc.hook.autodev = /var/lib/lxc/$container/autodev" ;echo "#lxc.pty.max = 1024"; } >> /var/lib/lxc/"$container"/config
-echo "#lxc.cgroup.devices.allow = c 10:200 rwm" >> /var/lib/lxc/"$container"/config 
+sed -i "s/lxc.net.0.link =.*/lxc.net.0.link = $extdev/g" "$rootfs/.."/config
+{ echo "lxc.net.1.type = veth" ;echo "lxc.net.1.link = $intdev" ;echo "lxc.net.1.flags = up"; } >> "$rootfs/.."/config
+{ echo "## tun/tap" ;echo "#lxc.autodev = 1" ;echo "#lxc.hook.autodev = /var/lib/lxc/$container/autodev" ;echo "#lxc.pty.max = 1024"; } >> "$rootfs/.."/config
+echo "#lxc.cgroup.devices.allow = c 10:200 rwm" >> "$rootfs/.."/config 
 
-cp -a "$script_dir"/autodev /var/lib/lxc/"$container" 
+cp -a "$script_dir"/autodev "$rootfs/.."/ 
 
 #starting the container
 lxc-start -n "$container"
@@ -64,7 +81,7 @@ lxc-wait -n "$container" -s RUNNING
 #so we have to cp files and to be able to do so - we
 #need to know where the root file system of the container is located
 #lxcpath=$(lxc-config lxc.lxcpath)
-rootfs=$(lxc-info -n "$container" -c lxc.rootfs.path|rev|cut -d " " -f 1|cut -d ":" -f 1|rev)
+#rootfs=$(lxc-info -n "$container" -c lxc.rootfs.path|rev|cut -d " " -f 1|cut -d ":" -f 1|rev)
 #containerpath="$lxcpath"/"$container"
 
 #Now we customize the network interface configuration and
@@ -143,6 +160,8 @@ lxc-wait -n "$container" -s STOPPED
 
 lxc-start -n "$container"
 lxc-wait -n "$container" -s RUNNING
+
+lxc-attach -n "$container" -- bash -c "echo ubuntu:resu | chpasswd" 
 
 #netplan: arghhh! We want ifupdown and so we need to get rid of 
 #this junk!
